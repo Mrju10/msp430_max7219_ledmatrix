@@ -1,0 +1,276 @@
+#include "io430.h"
+#include "ABD.h"
+#define MAX_CS BIT5
+#define NO_OP 0x00
+#include "BCD.h"
+
+unsigned char A1[8]={0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+unsigned int s[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+unsigned char s1[8]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+unsigned char Mat[3]={BIT7,BIT6,BIT5};
+unsigned char bit[3]={1,2,3};
+unsigned int Se=35;
+unsigned int Ho=06;       //variables para el conteo del tiempo Se- gundo  Mi- nuto  Ho -ra
+unsigned int Mi=48;
+
+
+void sendData0 (unsigned int data1, unsigned int data2){
+	P1OUT &= ~MAX_CS;
+	UCA0TXBUF = data1;
+	while (! (IFG2 & UCA0TXIFG));
+	UCA0TXBUF = data2;
+	while (! (IFG2 & UCA0TXIFG));
+        while (UCA0STAT & UCBUSY);
+	P1OUT |= MAX_CS;
+}
+
+void sendData1 (unsigned int data1, unsigned int data2){
+
+          P1OUT &= ~MAX_CS;
+
+	UCA0TXBUF = data1;
+	while (! (IFG2 & UCA0TXIFG));
+	UCA0TXBUF = data2;
+	while (! (IFG2 & UCA0TXIFG));
+          UCA0TXBUF = 0x00;
+          while (! (IFG2 & UCA0TXIFG));
+
+  
+          //UCA0TXBUF = 0x00;
+          //while (! (IFG2 & UCA0TXIFG));
+          //UCA0TXBUF = 0x00;
+          //while (! (IFG2 & UCA0TXIFG));
+
+        while (UCA0STAT & UCBUSY);
+        
+	P1OUT |= MAX_CS;
+  
+}
+void sendData2(unsigned int data1, unsigned int data2){
+
+          P1OUT &= ~MAX_CS;
+   
+        UCA0TXBUF = 0x00;
+        while (! (IFG2 & UCA0TXIFG));
+	UCA0TXBUF = data1;
+	while (! (IFG2 & UCA0TXIFG));
+	UCA0TXBUF = data2;
+	while (! (IFG2 & UCA0TXIFG));
+        
+        //  UCA0TXBUF = 0x00;
+        //  while (! (IFG2 & UCA0TXIFG));
+          //UCA0TXBUF = 0x00;
+          //while (! (IFG2 & UCA0TXIFG));
+
+        while (UCA0STAT & UCBUSY);
+        
+	P1OUT |= MAX_CS;
+  
+}
+void sendData3 (unsigned int data1, unsigned int data2){
+
+          P1OUT &= ~MAX_CS;
+
+	UCA0TXBUF = data1;
+	while (! (IFG2 & UCA0TXIFG));
+	UCA0TXBUF = data2;
+	while (! (IFG2 & UCA0TXIFG));
+        while (UCA0STAT & UCBUSY);
+      
+          UCA0TXBUF = 0x00;
+          while (! (IFG2 & UCA0TXIFG));
+          UCA0TXBUF = 0x00;
+          while (! (IFG2 & UCA0TXIFG));
+
+          while (UCA0STAT & UCBUSY);
+        
+          
+	P1OUT |= MAX_CS;
+}
+
+void Cmt2(unsigned char vec[8],unsigned int k)
+{
+          
+        s[0]=vec[7];
+
+         for(int i=1;i<=9;i++)
+       {
+          
+           for(int j=1;j<=8;j++){
+             if(k==1){
+            sendData1 (8-j+1 , s[8-j]);
+           
+            __delay_cycles(30000);
+             }
+            if(k==2){
+            sendData2 (8-j+1 , s[8-j]);
+           
+            __delay_cycles(30000);
+             }
+            if(k==3){
+            sendData3 (8-j+1 , s[8-j]);
+           
+            __delay_cycles(30000);
+             }
+             
+           for(int j=i+1;j<=6;j++){
+             
+             s[j+1]=s[j];} 
+          
+           for(int j=0;j<=i;j++){
+             s[i-j]=vec[8-j];}
+           
+                     }
+         }
+
+}
+
+
+void initMax () {
+    P1OUT |= MAX_CS;
+ 
+    // all leds up
+    sendData0(0x0F, 0x01);
+    __delay_cycles(5000);
+    sendData0(0x0F, 0x00);
+
+    //enable mode B
+    sendData0 (0x09, 0x00);
+
+    // lower intensity
+    sendData0(0x0A, 0x03);
+
+    // scan 4 digits
+    sendData0(0x0B, 0x0F);
+
+    //turn on chip
+    sendData0(0x0C, 0x01);
+      
+    
+}
+void implet (unsigned char vec[8]){
+  for(int g=4;g>=1;g--){  
+      
+            Cmt2(vec,g);
+          initMax();
+          for(int j=0;j<=7;j++){
+             s[j+1]=0x00;}
+  }
+
+}
+
+void NumLCD(int Num)
+{
+     if(Num==0){ implet(N0);}     
+     if(Num==1){ implet(N1);}
+     if(Num==2){ implet(N2);}
+     if(Num==3){ implet(N3);}
+     if(Num==4){ implet(N4);}
+     if(Num==5){ implet(N5);}                    
+     if(Num==6){ implet(N6);}
+     if(Num==7){ implet(N7);}
+     if(Num==8){ implet(N8);}
+     if(Num==9){ implet(N9);}
+     
+      
+} 
+int main( void )
+{
+    WDTCTL = WDTPW + WDTHOLD; // Stop WDT
+    //DCO Trabajando a 1MHz aprox.
+     BCSCTL2 = SELM_0 | DIVM_0 | DIVS_0;
+
+    if (CALBC1_16MHZ != 0xFF) {
+      
+        __delay_cycles(100000);
+
+  
+        DCOCTL = 0x00;
+        BCSCTL1 = CALBC1_16MHZ;     /* Set DCO to 16MHz */
+        DCOCTL = CALDCO_16MHZ;
+    }
+
+    BCSCTL1 |= XT2OFF | DIVA_0;
+
+    BCSCTL3 = XT2S_0 | LFXT1S_2 | XCAP_1;
+    
+    P1SEL = BIT0 | BIT1 | BIT2 | BIT4 |~BIT5 ;
+    P1SEL2 = BIT1 | BIT2 | BIT4 |~BIT5;
+    P1DIR |= BIT5;
+   
+    
+    UCA0CTL1 |= UCSWRST;//desabilita el USCI
+   // UCA0CTL0 |= UCMST+UCCKPH+UCMSB+UCSYNC;    // 3-pin, 8-bit SPI master
+    UCA0CTL0 = UCCKPL | UCMSB | UCMST | UCMODE_0 | UCSYNC;
+            
+      
+    
+    UCA0CTL1 |= UCSSEL_2 + UCSWRST;// SMCLK
+    UCA0BR0 = 32; // /2
+
+     //UCA0CTL1 |= UCSSEL_0; // SMCLK
+    UCA0CTL1 &= ~UCSWRST; // **Initialize USCI state machine**
+    initMax();
+
+    TACTL  = TASSEL_1 + ID_3 + TAIE;                   // Tassel_1  (frecuencia de cristal 32768)  ;  ID_ Frecuencia dividida en 8 para poder utilizar valores menores a 65535  ; TAIE habilitador de interrupción
+    TACTL |= MC_1;                                                // modo de cuenta de 0 a TACCR0
+    TACCR0=2049;  //valor necesarrrio para que el Timer cuenTe 1 segundo
+
+     __bis_SR_register(GIE);
+
+
+   while (1) {
+        P1OUT ^= BIT0;              /* Toggle LED on P1.0 */
+        
+        CV(Mi);
+       
+       
+       NumLCD(UNIDAD);
+       implet(PU);
+       CV(Se);
+       NumLCD(DECENA);
+       NumLCD(UNIDAD);
+       implet(P);
+       implet(M);
+       implet(J);
+       implet(A);
+       implet(I);
+       implet(M);
+       implet(E1); 
+       implet(S);
+       implet(Cora);
+       
+       implet(E1); 
+       implet(NA);
+        implet(Y);  
+      
+          
+   }
+}
+
+#pragma	vector = TIMER0_A1_VECTOR
+__interrupt void Timer0 (void)
+{
+ 
+	switch(TAIV)
+	{
+		case  2:		break;
+		case  4:		break;
+                case 10: 
+                          
+                                  Se++;
+                                 
+                                      if(Se==60)
+                                      {  
+                                        Se=0;
+                                        Mi=Mi+1;
+                                        if(Mi==60)
+                                            {                     
+                                              Mi=0;
+                                              Ho=Ho+1;
+                                              if(Ho==13)
+                                              {Ho=1;}         }
+                                      }
+                                     break;
+	}
+}
